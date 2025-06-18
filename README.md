@@ -1,6 +1,6 @@
 # Zabbix Integration: Semaphore Task Monitoring
 
-**Template:** `Template Semaphore`  
+**Template:** `Zabbix template semaphore task monitoring`  
 **Zabbix Version:** 7.0+
 
 ---
