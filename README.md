@@ -22,6 +22,7 @@ Agentless monitoring of [Ansible Semaphore](https://ansible-semaphore.com/) via 
 - Semaphore instance with REST API access
 - A valid API token stored in the macro `{$API_TOKEN}`
 - API must be reachable via `{$SEMAPHORE_URL}`
+- Semaphore project ID `{$PROJECT_NUMBER}`
 - Template must be applied to a Zabbix host that can reach the Semaphore API
 
 | Macro               | Example Value                   | Description                                                  |
