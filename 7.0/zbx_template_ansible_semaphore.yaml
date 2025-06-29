@@ -31,7 +31,7 @@ zabbix_export:
           name: Semaphor-raw
           type: HTTP_AGENT
           key: semaphore.raw
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           url: '{$SEMAPHORE_URL}/api/project/{$PROJECT_NUMBER}/templates'
