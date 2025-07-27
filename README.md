@@ -1,4 +1,4 @@
-# Zabbix Integration: Semaphore Task Monitoring
+# Zabbix Integration: Semaphore Ansible Task Monitoring
 
 **Template:** `Zabbix template semaphore task monitoring`  
 **Zabbix Version:** 7.0+
