@@ -1,95 +1,113 @@
-# Zabbix Integration: Semaphore Ansible Task Monitoring
+# Zabbix Template Semaphore Ansible Task Monitoring
 
-**Template:** `Zabbix template semaphore task monitoring`  
-**Zabbix Version:** 7.0+
-
----
-
-## 💡 Overview
-
-Agentless monitoring of [Ansible Semaphore](https://ansible-semaphore.com/) via its REST API:
-
-- Fetches all templates from a specific Semaphore project (`{$SEMAPHORE_URL}/api/project/{$PROJECT_NUMBER}/templates`)
-- Uses Low-Level Discovery (LLD) to dynamically detect templates
-- Retrieves and monitors the status of the last executed task for each template
-- Applies JSON preprocessing and value mapping to normalize statuses
-- Triggers alerts when tasks fail (configurable per template via macro)
+This Zabbix template enables agentless monitoring of Ansible Semaphore via its REST API. It dynamically discovers Semaphore templates in a project, fetches each template’s last task status, maps statuses to numeric values, and can trigger alerts on failures.
 
 ---
 
-## 🔍 Requirements
+## Requirements
 
-- Semaphore instance with REST API access
-- A valid API token stored in the macro `{$API_TOKEN}`
-- API must be reachable via `{$SEMAPHORE_URL}`
-- Semaphore project ID `{$PROJECT_NUMBER}`
-- Template must be applied to a Zabbix host that can reach the Semaphore API
-
-| Macro               | Example Value                   | Description                                                  |
-|---------------------|----------------------------------|--------------------------------------------------------------|
-| `{$API_TOKEN}`       | _(SECRET)_                      | Semaphore API token for authentication (Bearer token)        |
-| `{$SEMAPHORE_URL}`   | `http://192.168.10.105:3000`    | Base URL of the Semaphore API (including port)               |
-| `{$PROJECT_NUMBER}`  | `1`                             | Semaphore project ID (e.g., 1 = first project)               |
-| `{$ENABLE_TRIGGER}`  | `1`                             | Enables per-task error triggers (1 = enabled, 0 = disabled)  |
+- **Zabbix Server** version 7.0 or higher  
+- Ansible Semaphore instance with API access  
+- Valid API token set in macro `{$API_TOKEN}`  
+- Host macros defined on the Zabbix host object (see “Macros” section)
 
 ---
 
-## 📑 Items Included in the Template
+## 1. Create an API Token in Semaphore
 
-| Item Key                 | Description                                                              |
-|--------------------------|---------------------------------------------------------------------------|
-| `semaphore.raw`          | HTTP Agent item fetching template data from the API                      |
-| `task.status[{#ID}]`     | Dependent item showing last task status for a discovered template         |
+1. **Log in**  
+   - Open the Ansible Semaphore web interface and authenticate.
+
+2. **Generate the Token**  
+   - Navigate to **User → API Tokens** (or similar in your Semaphore version) and click **Create Token**.  
+---
+
+## Installation
+
+1. **Import into Zabbix**  
+   - In Zabbix go to **Configuration → Templates → Import** and select the YAML file.
+
+2. **Create a Host**  
+   - Go to **Configuration → Hosts → Create host**  
+     - **Host name:** `semaphore01`  
+     - **Groups:** e.g. `Templates`  
+     - **Interfaces:** leave empty  
+     - **Templates:** **Zabbix Template Semaphore Task Monitoring**
+
+3. **Configure Macros**  
+   - On the host’s **Macros** tab, set required values (see next section).
 
 ---
 
-## 🔄 Discovery Rule: `semaphor-discover`
+## Usage
 
-Discovers all templates within the specified Semaphore project using LLD.  
-Automatically creates:
-
-- Items: `task.status[{#ID}]` for each template
-- Triggers: Prototype trigger for task failures
-
-### 🎯 LLD Macros Used
-
-| LLD Macro         | JSON Path             | Purpose                                |
-|-------------------|------------------------|----------------------------------------|
-| `{#ID}`           | `$.id`                | Template ID                            |
-| `{#NAME}`         | `$.name`              | Template name                          |
-| `{#STATUS}`       | `$.status`            | Template status (optional)             |
-| `{#LAST_TASK_ID}` | `$.last_task.id`      | ID of the last task for the template   |
+1. Ensure your Semaphore API token and URL are reachable from the Zabbix server.  
+2. Verify the host is linked to **Zabbix Template Semaphore Task Monitoring**.  
+3. On the host’s **Template** tab, populate macros for API credentials, project ID, and triggers.  
+4. Check data under **Monitoring → Latest data** for `semaphore.raw` and `task.status[{#ID}]`.  
+5. Review alerts under **Monitoring → Triggers**.
 
 ---
 
-## 🔁 Value Mapping: `Task-status`
+## Macros
 
-Maps string-based status values from the API into Zabbix-readable numeric values:
+### Required Macros
 
-| Value | Mapped To |
-|--------|-----------|
-| `0`    | stopped   |
-| `1`    | success   |
-| `2`    | error     |
-| `3`    | running   |
+| Macro                 | Example Value                           | Description                                       |
+|-----------------------|-----------------------------------------|---------------------------------------------------|
+| `{$API_TOKEN}`        | **SECRET_TEXT**                         | Semaphore API token (Bearer token)                |
+| `{$SEMAPHORE_URL}`    | `http://192.168.10.105:3000`            | Base URL of the Semaphore API (including port)    |
+| `{$PROJECT_NUMBER}`   | `1`                                     | ID of the Semaphore project to monitor            |
 
----
+### Optional Trigger Macro
 
-## ⚠️ Trigger Prototype
-
-| Name                                          | Expression                                                                 |
-|-----------------------------------------------|----------------------------------------------------------------------------|
-| `Task {#NAME} Task-ID {#LAST_TASK_ID} failed` | `last(/Template Semaphore/task.status[{#ID}])=2 and {$ENABLE_TRIGGER:"{#ID}"}=1` |
-
-- Trigger fires when the last task for a template ends in error (`error`)
-- Triggers can be selectively disabled per task via the macro `{$ENABLE_TRIGGER}`
+| Macro               | Default | Description                                      |
+|---------------------|---------|--------------------------------------------------|
+| `{$ENABLE_TRIGGER}` | `1`     | Enable task-failure alerts (1 = enabled, 0 = off)|
 
 ---
 
-## 📦 Example Macro Configuration
+## Contents of the Template
 
-```text
-{$API_TOKEN}        = secret_generated_token
-{$SEMAPHORE_URL}    = http://192.168.10.105:3000
-{$PROJECT_NUMBER}   = 1
-{$ENABLE_TRIGGER}   = 1
+### Items
+
+- **semaphore.raw**  
+  - **Type:** HTTP agent  
+  - **Key:** `semaphore.raw`  
+  - **Fetches:** `{$SEMAPHORE_URL}/api/project/{$PROJECT_NUMBER}/templates`
+
+### Discovery Rule
+
+- **semaphor-discover**  
+  - **Type:** Dependent on `semaphore.raw`  
+  - **LLD macros:** `{#ID}`, `{#NAME}`, `{#LAST_TASK_ID}`, `{#STATUS}`  
+  - **Item prototype:**  
+    - **task.status[{#ID}]** – extracts and maps `last_task.status` to numeric values
+
+### Trigger Prototypes
+
+- **Task {#NAME} Task-ID {#LAST_TASK_ID} failed**  
+  ```
+  {last(/Zabbix Template Semaphore Task Monitoring/task.status[{#ID}])=2  
+   and {$ENABLE_TRIGGER:"{#ID}"}=1}  
+  ```  
+  - **Severity:** Warning  
+  - **Manual close:** Yes  
+
+---
+
+## Value Maps
+
+- **Task-status**  
+
+| Value | Meaning  |
+|-------|----------|
+| `0`   | stopped  |
+| `1`   | success  |
+| `2`   | error    |
+| `3`   | running  |
+| `4`   | waiting  |
+
+---
+
+> **Source:** https://github.com/Garfieldttt/zabbix-semaphore/tree/zabbix
