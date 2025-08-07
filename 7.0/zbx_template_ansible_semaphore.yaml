@@ -34,6 +34,7 @@ zabbix_export:
           history: 1d
           value_type: TEXT
           trends: '0'
+          timeout: 60s
           url: '{$SEMAPHORE_URL}/api/project/{$PROJECT_NUMBER}/templates'
           headers:
             - name: Authorization
@@ -52,7 +53,6 @@ zabbix_export:
               type: DEPENDENT
               key: 'task.status[{#ID}]'
               delay: '0'
-              trends: '0'
               valuemap:
                 name: Task-status
               preprocessing:
@@ -81,9 +81,10 @@ zabbix_export:
                   parameters:
                     - running
                     - '3'
-                - type: DISCARD_UNCHANGED_HEARTBEAT
+                - type: REGEX
                   parameters:
-                    - '300'
+                    - waiting
+                    - '4'
               master_item:
                 key: semaphore.raw
               tags:
@@ -94,7 +95,7 @@ zabbix_export:
                   expression: 'last(/Zabbix template semaphore task monitoring/task.status[{#ID}])=2 and {$ENABLE_TRIGGER:"{#ID}"}=1'
                   name: 'Task {#NAME} Task-ID {#LAST_TASK_ID} failed'
                   opdata: 'Status: {ITEM.LASTVALUE}'
-                  priority: HIGH
+                  priority: WARNING
                   manual_close: 'YES'
           master_item:
             key: semaphore.raw
@@ -136,3 +137,5 @@ zabbix_export:
               newvalue: error
             - value: '3'
               newvalue: running
+            - value: '4'
+              newvalue: waiting
