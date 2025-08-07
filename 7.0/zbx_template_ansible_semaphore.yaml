@@ -81,7 +81,7 @@ zabbix_export:
                   parameters:
                     - running
                     - '3'
-                - type: REGEX
+                - type: STR_REPLACE
                   parameters:
                     - waiting
                     - '4'
