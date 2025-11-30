@@ -48,8 +48,129 @@ zabbix_export:
           key: semaphor.discover
           delay: '0'
           item_prototypes:
+            - uuid: baaf69ae944649fd97e2c06fc2ee239d
+              name: 'App {#NAME}'
+              type: DEPENDENT
+              key: 'task.app[{#ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              valuemap:
+                name: Task-status
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].app.first()'
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: 9596e5da5520406885606fcf34c04e9a
+              name: 'Task end time {#NAME}'
+              type: DEPENDENT
+              key: 'task.endtime[{#ID}]'
+              delay: '0'
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].last_task.end.first()'
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      // ISO-8601 mit Mikrosekunden auf Millisekunden einkürzen
+                      var s = value;
+                      // z.B. 2025-10-05T01:10:24.338937Z -> 2025-10-05T01:10:24.338Z
+                      s = s.replace(
+                        /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3})\d*Z$/,
+                        '$1Z'
+                      );
+                      
+                      // Date.parse liefert ms seit Epoch -> durch 1000 für Sekunden
+                      return Math.floor(Date.parse(s) / 1000);
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: 77a0f532852d4abca11bbb8cdf35fd33
+              name: 'Task limit {#NAME}'
+              type: DEPENDENT
+              key: 'task.limit[{#ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              valuemap:
+                name: Task-status
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].task_params.limit.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: ace0df25fd994b2fa40ad48378e90982
+              name: 'Task skip tags {#NAME}'
+              type: DEPENDENT
+              key: 'task.skip_tags[{#ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              valuemap:
+                name: Task-status
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].task_params.skip_tags.first()'
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: bbfd0470a8c442a1a56c4f0b53e91287
+              name: 'Task start time {#NAME}'
+              type: DEPENDENT
+              key: 'task.starttime[{#ID}]'
+              delay: '0'
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].last_task.start.first()'
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      // ISO-8601 mit Mikrosekunden auf Millisekunden einkürzen
+                      var s = value;
+                      // z.B. 2025-10-05T01:10:24.338937Z -> 2025-10-05T01:10:24.338Z
+                      s = s.replace(
+                        /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3})\d*Z$/,
+                        '$1Z'
+                      );
+                      
+                      // Date.parse liefert ms seit Epoch -> durch 1000 für Sekunden
+                      return Math.floor(Date.parse(s) / 1000);
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
             - uuid: 3fc4c552ab534252ab22230b935a4082
-              name: 'Task {#NAME}'
+              name: 'Task status {#NAME}'
               type: DEPENDENT
               key: 'task.status[{#ID}]'
               delay: '0'
@@ -58,13 +179,7 @@ zabbix_export:
               preprocessing:
                 - type: JSONPATH
                   parameters:
-                    - '$[?(@.id=={#ID})].last_task.status'
-                - type: LTRIM
-                  parameters:
-                    - '["'
-                - type: RTRIM
-                  parameters:
-                    - '"]'
+                    - '$[?(@.id=={#ID})].last_task.status.first()'
                 - type: STR_REPLACE
                   parameters:
                     - stopped
@@ -89,23 +204,100 @@ zabbix_export:
                 key: semaphore.raw
               tags:
                 - tag: Semaphore
-                  value: task-status
+                  value: task_status
+                - tag: Semaphore
+                  value: '{#NAME}'
               trigger_prototypes:
-                - uuid: 0c6cf1cfefea495099fb62b336db9fba
-                  expression: |
-                    min(/Zabbix template semaphore task monitoring/task.status[{#ID}],{$JOB_RUNNING_TIME})=3
-                    and max(/Zabbix template semaphore task monitoring/task.status[{#ID}],{$JOB_RUNNING_TIME})=3
-                    and {$ENABLE_TRIGGER:"{#ID}"}=1
-                  name: 'Task {#NAME} (Task ID {#LAST_TASK_ID}) in failed state for >{$JOB_RUNNING_TIME}'
-                  opdata: 'Status: {ITEM.LASTVALUE}'
-                  priority: AVERAGE
-                  manual_close: 'YES'
                 - uuid: bb8e442fd6a348fe83031d1270f52466
                   expression: 'last(/Zabbix template semaphore task monitoring/task.status[{#ID}])=2 and {$ENABLE_TRIGGER:"{#ID}"}=1'
                   name: 'Task {#NAME} Task-ID {#LAST_TASK_ID} failed'
                   opdata: 'Status: {ITEM.LASTVALUE}'
                   priority: AVERAGE
                   manual_close: 'YES'
+            - uuid: bfe573c01f1f44578ce13842515411ab
+              name: 'Task tags {#NAME}'
+              type: DEPENDENT
+              key: 'task.tags[{#ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              valuemap:
+                name: Task-status
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].tags.first()'
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: 54f33bcbc9154a0d842c487bc48d5d57
+              name: 'Task execution count {#NAME}'
+              type: DEPENDENT
+              key: 'task.tasks[{#ID}]'
+              delay: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].tasks.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: ff7578d45ebd44838562cd1c94dfb482
+              name: 'Task alias {#NAME}'
+              type: DEPENDENT
+              key: 'task.tpl_alias[{#ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              valuemap:
+                name: Task-status
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].last_task.tpl_alias.first()'
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+            - uuid: 880c562861604c8ca27ff837db4b2f27
+              name: 'Task playbook {#NAME}'
+              type: DEPENDENT
+              key: 'task.tpl_playbook[{#ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              valuemap:
+                name: Task-status
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.id=={#ID})].last_task.tpl_playbook.first()'
+              master_item:
+                key: semaphore.raw
+              tags:
+                - tag: Semaphore
+                  value: task
+                - tag: Semaphore
+                  value: '{#NAME}'
+          trigger_prototypes:
+            - uuid: 0c6cf1cfefea495099fb62b336db9fba
+              expression: 'last(/Zabbix template semaphore task monitoring/task.endtime[{#ID}])-last(/Zabbix template semaphore task monitoring/task.starttime[{#ID}])>={$JOB_RUNNING_TIME}'
+              name: 'Task {#NAME} (Task ID {#LAST_TASK_ID}) in failed state for >{$JOB_RUNNING_TIME}'
+              opdata: 'Status: {ITEM.LASTVALUE}'
+              priority: AVERAGE
+              manual_close: 'YES'
           master_item:
             key: semaphore.raw
           lld_macro_paths:
@@ -129,8 +321,8 @@ zabbix_export:
           value: '1'
           description: 'Enables task failure triggers (1 = enabled, 0 = disabled)'
         - macro: '{$JOB_RUNNING_TIME}'
-          value: 5h
-          description: 'Time period the job must remain in running state before triggering an alert (e.g. 5h)'
+          value: '3600'
+          description: 'Time period the job must remain in running state before triggering an alert (e.g. 3600s)'
         - macro: '{$PROJECT_NUMBER}'
           value: '1'
           description: 'Semaphore project ID (e.g., 1 for Project with ID 1)'
