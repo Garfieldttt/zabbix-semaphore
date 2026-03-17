@@ -14,14 +14,14 @@ zabbix_export:
         This template enables agentless monitoring of Ansible Semaphore via its REST API.
         
         Features:
-        - API Health-Check via /api/ping
-        - Semaphore- und Ansible-Versionstracking via /api/info
+        - API health check via /api/ping
+        - Semaphore and Ansible version tracking via /api/info
         - Fetches templates from a specified Semaphore project (via macro {$PROJECT_NUMBER})
         - Uses Low-Level Discovery (LLD) to detect templates dynamically
-        - Extracts and monitors last task status, start/end time, duration and playbook per template
+        - Extracts and monitors last task status, start/end time and playbook per template
         - Automatically maps statuses (success, error, running, stopped, waiting) to numeric values
         - Triggers alerts when tasks fail (configurable per template via context macro {$ENABLE_TRIGGER:"{#ID}"})
-        - Triggers alerts when tasks remain in running state longer than {$JOB_RUNNING_TIME} seconds
+        - Triggers alerts when tasks remain in running state longer than {$JOB_RUNNING_TIME}
         
         Requirements:
         - Semaphore instance with API access
@@ -39,7 +39,7 @@ zabbix_export:
           history: 90d
           value_type: CHAR
           trends: '0'
-          description: 'Ansible-Version die auf dem Semaphore-Host installiert ist. Aus /api/info, Feld "ansible".'
+          description: 'Ansible version installed on the Semaphore host. From /api/info, field "ansible".'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -57,7 +57,7 @@ zabbix_export:
           history: 1d
           value_type: TEXT
           trends: '0'
-          description: 'Rohdaten der Semaphore-Instanzinformationen. Quelle fuer Versions-Items. Endpoint: /api/info'
+          description: 'Raw data of Semaphore instance information. Source for version items. Endpoint: /api/info'
           url: '{$SEMAPHORE_URL}/api/info'
           headers:
             - name: Authorization
@@ -75,7 +75,7 @@ zabbix_export:
           history: 7d
           value_type: CHAR
           trends: '0'
-          description: 'Health-Check der Semaphore API. Erwartet die Antwort "pong". Kein Auth-Header erforderlich. Endpoint: /api/ping'
+          description: 'Health check of the Semaphore API. Expects the response "pong". No auth header required. Endpoint: /api/ping'
           url: '{$SEMAPHORE_URL}/api/ping'
           tags:
             - tag: Semaphore
@@ -83,20 +83,20 @@ zabbix_export:
           triggers:
             - uuid: 7ac50a861eed4fcc83dab29cd4412b54
               expression: 'last(/Zabbix template semaphore task monitoring/semaphore.ping)<>"pong"'
-              name: 'Semaphore API nicht erreichbar'
-              opdata: 'Antwort: {ITEM.LASTVALUE}'
+              name: 'Semaphore API unreachable'
+              opdata: 'Response: {ITEM.LASTVALUE}'
               priority: AVERAGE
-              description: 'Die Semaphore API antwortet nicht mit "pong". Semaphore ist moeglicherweise nicht erreichbar oder der Dienst ist gestoppt.'
+              description: 'The Semaphore API is not responding with "pong". Semaphore may be unreachable or the service is stopped.'
               manual_close: 'YES'
         - uuid: 59ceff5c10084e4ba92f8e83c03527e2
-          name: Semaphor-raw
+          name: 'Semaphore raw'
           type: HTTP_AGENT
           key: semaphore.raw
           delay: '300'
           history: 1d
           value_type: TEXT
           trends: '0'
-          description: 'Rohdaten aller Templates des konfigurierten Projekts ({$PROJECT_NUMBER}). Quelle fuer alle LLD-Dependent Items und die Discovery-Regel. Endpoint: /api/project/{$PROJECT_NUMBER}/templates'
+          description: 'Raw data of all templates in the configured project ({$PROJECT_NUMBER}). Source for all dependent items and the LLD discovery rule. Endpoint: /api/project/{$PROJECT_NUMBER}/templates'
           timeout: 60s
           url: '{$SEMAPHORE_URL}/api/project/{$PROJECT_NUMBER}/templates'
           headers:
@@ -115,7 +115,7 @@ zabbix_export:
           history: 90d
           value_type: CHAR
           trends: '0'
-          description: 'Softwareversion der Semaphore-Instanz. Aus /api/info, Feld "version".'
+          description: 'Software version of the Semaphore instance. From /api/info, field "version".'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -131,16 +131,16 @@ zabbix_export:
           type: DEPENDENT
           key: semaphor.discover
           delay: '0'
-          description: 'Entdeckt alle Templates im konfigurierten Semaphore-Projekt. LLD-Makros: {#ID} (Template-ID), {#NAME} (Name), {#LAST_TASK_ID} (letzte Task-ID), {#STATUS} (Template-Status).'
+          description: 'Discovers all templates in the configured Semaphore project. LLD macros: {#ID} (template ID), {#NAME} (name), {#LAST_TASK_ID} (last task ID), {#STATUS} (template status).'
           item_prototypes:
             - uuid: 75fda2730e3049168b0e0a3d43eddea7
-              name: 'Task {#NAME} App-Typ'
+              name: 'Task {#NAME} app type'
               type: DEPENDENT
               key: 'task.app[{#ID}]'
               delay: '0'
               value_type: CHAR
               trends: '0'
-              description: 'App-Typ des Semaphore-Templates {#NAME} (z.B. ansible, terraform). Aus Template-Feld "app".'
+              description: 'App type of Semaphore template {#NAME} (e.g. ansible, terraform). From template field "app".'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -158,12 +158,12 @@ zabbix_export:
                 - tag: Semaphore
                   value: task
             - uuid: 8bdc90ecedd44183aa624d5a7747f9fa
-              name: 'Task {#NAME} Endzeit'
+              name: 'Task {#NAME} end time'
               type: DEPENDENT
               key: 'task.endtime[{#ID}]'
               delay: '0'
               units: unixtime
-              description: 'Unix-Timestamp des Endes des letzten Task-Runs fuer Template {#NAME}. Wird verworfen solange der Task noch laeuft (kein end-Zeitstempel vorhanden).'
+              description: 'Unix timestamp of the end of the last task run for template {#NAME}. Discarded while the task is still running (no end timestamp available).'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -190,13 +190,13 @@ zabbix_export:
                 - tag: Semaphore
                   value: task
             - uuid: 74f705372d954a6180fa15e3e7d0b9ef
-              name: 'Task {#NAME} Playbook'
+              name: 'Task {#NAME} playbook'
               type: DEPENDENT
               key: 'task.playbook[{#ID}]'
               delay: '0'
               value_type: CHAR
               trends: '0'
-              description: 'Name des Playbooks das beim letzten Run von Template {#NAME} ausgefuehrt wurde. Aus last_task.tpl_playbook.'
+              description: 'Name of the playbook executed in the last run of template {#NAME}. From last_task.tpl_playbook.'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -214,12 +214,12 @@ zabbix_export:
                 - tag: Semaphore
                   value: task
             - uuid: 3892ddc4103444ce99331edda3bda5af
-              name: 'Task {#NAME} Startzeit'
+              name: 'Task {#NAME} start time'
               type: DEPENDENT
               key: 'task.starttime[{#ID}]'
               delay: '0'
               units: unixtime
-              description: 'Unix-Timestamp des Starts des letzten Task-Runs fuer Template {#NAME}. ISO-8601-Zeitstempel aus last_task.start wird via JavaScript in Sekunden seit Epoch konvertiert.'
+              description: 'Unix timestamp of the start of the last task run for template {#NAME}. ISO-8601 timestamp from last_task.start is converted to seconds since epoch via JavaScript.'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -250,7 +250,7 @@ zabbix_export:
               type: DEPENDENT
               key: 'task.status[{#ID}]'
               delay: '0'
-              description: 'Numerischer Status des letzten Task-Runs fuer Template {#NAME} (ID: {#ID}). Mapping: 0=stopped, 1=success, 2=error, 3=running, 4=waiting.'
+              description: 'Numeric status of the last task run for template {#NAME} (ID: {#ID}). Mapping: 0=stopped, 1=success, 2=error, 3=running, 4=waiting.'
               valuemap:
                 name: Task-status
               preprocessing:
@@ -291,17 +291,17 @@ zabbix_export:
               trigger_prototypes:
                 - uuid: bb8e442fd6a348fe83031d1270f52466
                   expression: 'last(/Zabbix template semaphore task monitoring/task.status[{#ID}])=2 and {$ENABLE_TRIGGER:"{#ID}"}=1'
-                  name: 'Task {#NAME} (ID {#LAST_TASK_ID}) fehlgeschlagen'
+                  name: 'Task {#NAME} (ID {#LAST_TASK_ID}) failed'
                   opdata: 'Status: {ITEM.LASTVALUE}'
                   priority: WARNING
-                  description: 'Der letzte Run von Template {#NAME} hat den Status "error" (2). Deaktivierbar per Context-Makro {$ENABLE_TRIGGER:"{#ID}"}=0 auf dem Host.'
+                  description: 'The last run of template {#NAME} has status "error" (2). Can be disabled per template via context macro {$ENABLE_TRIGGER:"{#ID}"}=0 on the host.'
                   manual_close: 'YES'
                 - uuid: eb2cf8b2793640eba201231d9519fe64
                   expression: 'min(/Zabbix template semaphore task monitoring/task.status[{#ID}],{$JOB_RUNNING_TIME})=3'
-                  name: 'Task {#NAME} laeuft laenger als {$JOB_RUNNING_TIME}s'
+                  name: 'Task {#NAME} running longer than {$JOB_RUNNING_TIME}'
                   opdata: 'Status: {ITEM.LASTVALUE}'
                   priority: WARNING
-                  description: 'Template {#NAME} hat seit mehr als {$JOB_RUNNING_TIME} Sekunden den Status "running" (3). Moeglicher Haenger. Schwellwert anpassbar per Makro {$JOB_RUNNING_TIME}.'
+                  description: 'Template {#NAME} has been in status "running" (3) for longer than {$JOB_RUNNING_TIME}. Possible hung task. Threshold adjustable via macro {$JOB_RUNNING_TIME}.'
                   manual_close: 'YES'
           master_item:
             key: semaphore.raw
@@ -324,33 +324,36 @@ zabbix_export:
           description: 'Semaphore API token for authentication (Bearer token)'
         - macro: '{$ENABLE_TRIGGER}'
           value: '1'
-          description: 'Enables task failure triggers globally (1 = enabled, 0 = disabled). Per-Template-Deaktivierung: Context-Makro {$ENABLE_TRIGGER:"{#ID}"}=0 auf dem Host setzen.'
+          description: 'Enables task failure triggers globally (1 = enabled, 0 = disabled). Per-template: set context macro {$ENABLE_TRIGGER:"{#ID}"}=0 on the host.'
         - macro: '{$JOB_RUNNING_TIME}'
           value: 1h
-          description: 'Zeitraum ab dem ein laufender Task als haengend gilt (muss Zeiteinheit enthalten, z.B. 1h, 30m, 90m). Wird direkt als Zeitperiode in min()-Funktion verwendet.'
+          description: 'Time period after which a running task is considered stuck. Must include unit (e.g. 1h, 30m). Used directly as time period in min() trigger function.'
         - macro: '{$PROJECT_NUMBER}'
           value: '1'
-          description: 'Semaphore project ID. Sichtbar in der Semaphore-URL beim Oeffnen eines Projekts (z.B. /project/1/).'
+          description: 'Semaphore project ID. Visible in the Semaphore URL when opening a project (e.g. /project/1/).'
         - macro: '{$SEMAPHORE_URL}'
           value: 'http://192.168.10.105:3000'
-          description: 'Base URL der Semaphore API inklusive Port. Kein Trailing-Slash. Beispiel: http://semaphore.example.com:3000'
+          description: 'Base URL of the Semaphore API including port. No trailing slash. Example: http://semaphore.example.com:3000'
       dashboards:
         - uuid: 90a755353a54476d9c4e8077dbf685fb
           name: 'Semaphore Task Monitoring'
           pages:
             - widgets:
                 - type: problems
-                  name: 'Aktive Probleme'
-                  width: '72'
+                  name: 'Active Problems'
+                  width: '36'
                   height: '5'
                   fields:
                     - type: INTEGER
                       name: rf_rate
                       value: '60'
+                    - type: INTEGER
+                      name: show_suppressed
+                      value: '0'
                 - type: item
                   name: 'API Status'
                   'y': '5'
-                  width: '18'
+                  width: '9'
                   height: '3'
                   fields:
                     - type: ITEM
@@ -362,13 +365,13 @@ zabbix_export:
                       name: rf_rate
                       value: '60'
                     - type: INTEGER
-                      name: show.0
+                      name: show.1
                       value: '2'
                 - type: item
                   name: 'Semaphore Version'
-                  x: '18'
+                  x: '9'
                   'y': '5'
-                  width: '17'
+                  width: '9'
                   height: '3'
                   fields:
                     - type: ITEM
@@ -380,13 +383,13 @@ zabbix_export:
                       name: rf_rate
                       value: '600'
                     - type: INTEGER
-                      name: show.0
+                      name: show.1
                       value: '2'
                 - type: item
                   name: 'Ansible Version'
-                  x: '35'
+                  x: '18'
                   'y': '5'
-                  width: '19'
+                  width: '9'
                   height: '3'
                   fields:
                     - type: ITEM
@@ -398,13 +401,13 @@ zabbix_export:
                       name: rf_rate
                       value: '600'
                     - type: INTEGER
-                      name: show.0
+                      name: show.1
                       value: '2'
                 - type: clock
-                  name: Serverzeit
-                  x: '54'
+                  name: 'Server Time'
+                  x: '27'
                   'y': '5'
-                  width: '18'
+                  width: '9'
                   height: '3'
                   fields:
                     - type: INTEGER
